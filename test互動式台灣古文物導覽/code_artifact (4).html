@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>變動的大地 - 史前台灣玉路</title>
+    
+    <script>
+        // 圖片讀取失敗時的自動備援機制：自動嘗試不同副檔名
+        function fallbackImg(img, baseName) {
+            const exts = ['.png', '.jpeg', '.JPG', '.PNG', '.JPEG', '.webp'];
+            let attempt = parseInt(img.dataset.attempt || '0');
+            if (attempt < exts.length) {
+                // 自動嘗試下一個副檔名
+                img.src = './' + baseName + exts[attempt];
+                img.dataset.attempt = attempt + 1;
+            } else {
+                img.onerror = null; // 停止嘗試，避免無限迴圈
+                // 顯示內建的安全佔位圖 (Base64 SVG)，確保離線時也不會出現破圖圖示
+                img.src = 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 width%3D%22100%25%22 height%3D%22100%25%22 viewBox%3D%220 0 100 100%22 preserveAspectRatio%3D%22none%22%3E%3Crect width%3D%22100%22 height%3D%22100%22 fill%3D%22%230f172a%22%2F%3E%3Ctext x%3D%2250%22 y%3D%2250%22 fill%3D%22%2364748b%22 font-size%3D%2214%22 text-anchor%3D%22middle%22 dominant-baseline%3D%22middle%22%3E%E7%BC%BA%E5%9C%96%3C%2Ftext%3E%3C%2Fsvg%3E';
+            }
+        }
+    </script>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- 引入 OrbitControls -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #050510; font-family: 'Noto Sans TC', sans-serif; }
+        #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
+        
+        /* UI 覆蓋層樣式 */
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; }
+        .interactive-panel { pointer-events: auto; backdrop-filter: blur(8px); background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); }
+        
+        /* 隱藏滾動條 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.3); border-radius: 10px; }
+
+        /* 發光效果 */
+        .glow-text { text-shadow: 0 0 10px rgba(74, 222, 128, 0.8); }
+        .glow-border { box-shadow: 0 0 15px rgba(56, 189, 248, 0.5); }
+
+        /* 模態框動畫 */
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .modal-animate { animation: fadeIn 0.3s ease-out forwards; }
+    </style>
+</head>
+<body class="text-gray-200 selection:bg-teal-500 selection:text-white">
+
+    <div id="canvas-container"></div>
+
+    <div id="ui-layer" class="p-4 md:p-8">
+        <!-- 頂部資訊 -->
+        <header class="flex flex-col md:flex-row justify-between items-start gap-4 w-full">
+            <div class="flex flex-col gap-2">
+                <div class="interactive-panel p-4 rounded-xl max-w-sm">
+                    <h1 class="text-2xl font-bold text-teal-400 glow-text mb-2">史前玉路與變動的大地</h1>
+                    <p class="text-sm text-gray-300 leading-relaxed mb-3">
+                        觀察古地理基底。海水位較高，淹沒了今日的西南部平原。發光的藍線標示著南島語族從花蓮豐田出發的玉石貿易航線，最終抵達位於海岸高地上的「大坪頂」聚落。
+                    </p>
+                    <!-- 插入 000.png 作為參考圖 -->
+                    <div class="relative w-full h-32 rounded-lg overflow-hidden border border-slate-600 mb-1 group cursor-pointer" onclick="window.open('./000.png', '_blank')">
+                         <img src="./000.png" onerror="fallbackImg(this, '000')" alt="台灣地形參考圖" class="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition duration-300">
+                         <div class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition duration-300">
+                             <span class="text-white text-xs font-bold tracking-wider">點擊查看原圖</span>
+                         </div>
+                    </div>
+                </div>
+                <div class="text-xs text-teal-200 drop-shadow-md ml-1">
+                    操作提示：滑鼠左鍵旋轉，右鍵平移，滾輪縮放。
+                </div>
+            </div>
+
+            <!-- 控制面板 -->
+            <div class="interactive-panel p-3 rounded-xl flex flex-col gap-2 shrink-0">
+                <!-- 新增：導覽簡介按鈕 -->
+                <button onclick="openModal('guide')" class="px-4 py-2 bg-teal-700 hover:bg-teal-600 rounded transition text-sm font-medium border border-teal-500 focus:outline-none text-white animate-pulse">📝 導覽簡介</button>
+                <button id="btn-view-map" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded transition text-sm font-medium border border-slate-600 focus:outline-none">全島視角</button>
+                <button id="btn-view-dapingding" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded transition text-sm font-medium border border-slate-600 focus:outline-none">大坪頂聚落</button>
+                <button id="btn-view-hualien" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded transition text-sm font-medium border border-slate-600 focus:outline-none">豐田礦區</button>
+            </div>
+        </header>
+
+        <!-- 底部文物展示區 (模組四) -->
+        <footer class="interactive-panel p-4 rounded-t-2xl mx-auto max-w-4xl w-full flex justify-around items-center border-b-0 gap-2 overflow-x-auto mt-auto">
+            <div class="text-teal-400 font-bold tracking-wider mr-4 shrink-0">關鍵文物</div>
+            
+            <button onclick="openModal('artifact-ring')" class="group flex flex-col items-center shrink-0 focus:outline-none">
+                <div class="w-16 h-16 rounded-full border-2 border-teal-500/50 flex items-center justify-center bg-teal-900/30 group-hover:border-teal-300 transition duration-300 overflow-hidden relative shadow-lg shadow-teal-900/50">
+                    <img src="./ring.jpg" data-attempt="0" onerror="fallbackImg(this, 'ring')" alt="喇叭型玉環" class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
+                </div>
+                <span class="text-xs mt-2 text-gray-400 group-hover:text-teal-300 transition">喇叭型玉環</span>
+            </button>
+
+            <button onclick="openModal('artifact-jade')" class="group flex flex-col items-center shrink-0 focus:outline-none">
+                <div class="w-16 h-16 rounded-full border-2 border-green-600/50 flex items-center justify-center bg-green-900/30 group-hover:border-green-400 transition duration-300 overflow-hidden relative shadow-lg shadow-green-900/50">
+                    <img src="./stone.jpg" data-attempt="0" onerror="fallbackImg(this, 'stone')" alt="台灣閃玉原石" class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
+                </div>
+                <span class="text-xs mt-2 text-gray-400 group-hover:text-green-300 transition">台灣閃玉原石</span>
+            </button>
+
+            <button onclick="openModal('artifact-pottery')" class="group flex flex-col items-center shrink-0 focus:outline-none">
+                <div class="w-16 h-16 rounded-full border-2 border-orange-700/50 flex items-center justify-center bg-orange-900/30 group-hover:border-orange-400 transition duration-300 overflow-hidden relative shadow-lg shadow-orange-900/50">
+                    <img src="./dance.png" data-attempt="0" onerror="fallbackImg(this, 'dance')" alt="牽手跳舞陶片" class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
+                </div>
+                <span class="text-xs mt-2 text-gray-400 group-hover:text-orange-300 transition">牽手跳舞陶片</span>
+            </button>
+        </footer>
+
+        <!-- 新增：參考資料連結 -->
+        <div class="interactive-panel mt-2 py-2 px-4 rounded-b-2xl mx-auto max-w-4xl w-full flex flex-wrap justify-center items-center gap-x-4 gap-y-2 text-xs">
+            <span class="text-gray-400 tracking-wider">參考資料</span>
+            <a href="https://nchdb.boch.gov.tw/assets/overview/archaeologicalSite/20080923000002" target="_blank" rel="noopener noreferrer" class="text-teal-400 hover:text-teal-200 hover:underline transition duration-300">國家文化資產網</a>
+            <span class="text-slate-600">|</span>
+            <a href="https://beta.nmp.gov.tw/enews/no66/" target="_blank" rel="noopener noreferrer" class="text-teal-400 hover:text-teal-200 hover:underline transition duration-300">國立台灣史前文化博物館-發現史前館電子報</a>
+        </div>
+    </div>
+
+    <!-- 模態框 (文物詳情/導覽) -->
+    <div id="modal-container" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <!-- 加入 max-h-[90vh] 和 overflow-y-auto 讓內容過長時可以滾動 -->
+        <div id="modal-content" class="bg-slate-900 border border-teal-500/30 rounded-2xl max-w-2xl w-full p-6 relative shadow-2xl shadow-teal-900/20 max-h-[90vh] overflow-y-auto">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white focus:outline-none text-2xl leading-none z-10">&times;</button>
+            
+            <!-- 新增：導覽簡介內容 -->
+            <div id="modal-guide" class="hidden text-gray-300 mt-2">
+                <h2 class="text-2xl font-bold text-teal-300 mb-4 border-b border-slate-700 pb-2">史前玉路</h2>
+                <p class="leading-relaxed mb-6 bg-slate-800/50 p-4 rounded-lg border border-slate-700/50 shadow-inner">
+                    由<strong class="text-white">花蓮豐田</strong>（臺灣玉礦脈核心地帶）出發的史前貿易路線，不僅向東南亞跨海擴散，也活躍於島內。其中，位於雲林古坑的<strong class="text-teal-400">大坪頂遺址</strong>見證了這條翻越中央山脈、長達數千年前的長距離玉石交換網絡。
+                </p>
+
+                <h3 class="text-xl font-bold text-green-400 mb-2 mt-4 flex items-center gap-2"><span>一、</span>史前臺灣玉的貿易網絡</h3>
+                <p class="leading-relaxed mb-6 pl-4 border-l-2 border-green-700/50">
+                    史前南島語族工匠利用豐田與支亞干（萬榮平林）一帶的閃玉，透過精細的旋截技術製成裝飾品與工具。這些玉石不僅是島內社群（如大坪頂聚落）珍貴的交換物資，更隨海洋貿易擴展至菲律賓、越南等環南海地區，成為臺灣作為「南島語族母親島」的考古學強大佐證。
+                </p>
+
+                <h3 class="text-xl font-bold text-teal-200 mb-3 mt-4 flex items-center gap-2"><span>二、</span>古坑・大坪頂考古遺址</h3>
+                <p class="mb-3 font-medium text-white pl-4">📍 地理位置：位於雲林縣古坑鄉棋盤村的廣大高位河階台地上，海拔高度約 280 公尺。</p>
+                <ul class="list-disc pl-8 space-y-3 pb-4">
+                    <li><strong class="text-white">年代與文化：</strong>涵蓋距今約 4,000 年至 2,500 年前的新石器時代中期（繩紋紅陶文化）與晚期（營埔文化）。</li>
+                    <li><strong class="text-white">玉器貿易證明：</strong>大坪頂遺址雖位於中南部，但出土了大量原料來自臺灣東部（如豐田一帶）的閃玉飾品與工具，證實當時的史前人群已具備跨區域長距離的物資交換能力。</li>
+                    <li><strong class="text-white">珍貴文物：</strong>除玉器外，遺址還出土了石器作坊、灰坑等生活遺跡，以及全國唯一的「牽手跳舞灰黑砂陶圈足殘件」。</li>
+                </ul>
+            </div>
+
+            <!-- 喇叭型玉環內容 -->
+            <div id="modal-artifact-ring" class="hidden">
+                <h2 class="text-2xl font-bold text-teal-300 mb-4 border-b border-slate-700 pb-2">喇叭型玉環 (Trumpet-shaped Jade Ring)</h2>
+                <div class="flex flex-col md:flex-row gap-6 items-center">
+                    <div class="w-48 h-48 rounded-lg shrink-0 border border-slate-600 overflow-hidden shadow-lg shadow-teal-900/30">
+                        <img src="./ring.jpg" onerror="fallbackImg(this, 'ring')" alt="喇叭型玉環" class="w-full h-full object-cover hover:scale-105 transition duration-500">
+                    </div>
+                    <div>
+                        <p class="text-gray-300 leading-relaxed mb-3">
+                            <strong class="text-white">特徵：</strong> 造型如喇叭，管壁極薄，展現了史前工匠高超的切磋琢磨技術。邊緣銳利，拋光精細，在光線下能透出幽微的綠光。
+                        </p>
+                        <p class="text-gray-300 leading-relaxed">
+                            <strong class="text-white">意義：</strong> 通常被認為是戴在手臂上的裝飾品，或者是具有某種儀式、階級象徵的珍貴物件。這種形制的玉器在台灣西南部及東南亞地區的遺址中都有發現，是證明玉路貿易的重要證據。
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 台灣閃玉原石內容 -->
+            <div id="modal-artifact-jade" class="hidden">
+                <h2 class="text-2xl font-bold text-green-400 mb-4 border-b border-slate-700 pb-2">台灣閃玉原石 (Taiwan Nephrite Rough)</h2>
+                <div class="flex flex-col md:flex-row gap-6 items-center">
+                    <div class="w-48 h-48 rounded-lg shrink-0 border border-slate-600 overflow-hidden shadow-lg shadow-green-900/30">
+                         <img src="./stone.jpg" onerror="fallbackImg(this, 'stone')" alt="台灣閃玉原石" class="w-full h-full object-cover hover:scale-105 transition duration-500">
+                    </div>
+                    <div>
+                        <p class="text-gray-300 leading-relaxed mb-3">
+                            <strong class="text-white">產地：</strong> 主要產於花蓮縣壽豐鄉豐田地區的白鮑溪、荖腦溪一帶。這是一切玉器貿易的起點。
+                        </p>
+                        <p class="text-gray-300 leading-relaxed">
+                            <strong class="text-white">特徵：</strong> 顏色多呈翠綠、黃綠或墨綠色，帶有特有的黑色斑點（鉻鐵礦）。韌性極高，適合雕琢成各種精細的飾品。透過電子微探針分析，證實了環南海地區出土的許多玉器皆源自台灣。
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 牽手跳舞陶片內容 -->
+            <div id="modal-artifact-pottery" class="hidden">
+                <h2 class="text-2xl font-bold text-orange-400 mb-4 border-b border-slate-700 pb-2">牽手跳舞紋陶片 (Dancing Figures Pottery Sherd)</h2>
+                <div class="flex flex-col md:flex-row gap-6 items-center">
+                    <div class="w-48 h-48 rounded-lg shrink-0 border border-slate-600 overflow-hidden shadow-lg shadow-orange-900/30">
+                        <img src="./dance.png" onerror="fallbackImg(this, 'dance')" alt="牽手跳舞陶片" class="w-full h-full object-cover hover:scale-105 transition duration-500">
+                    </div>
+                    <div>
+                        <p class="text-gray-300 leading-relaxed mb-3">
+                            <strong class="text-white">特徵：</strong> 陶器表面刻劃或壓印著看似人形排列、手牽手的連續幾何紋飾。這種紋飾生動地描繪了當時人群的群體活動或儀式。
+                        </p>
+                        <p class="text-gray-300 leading-relaxed">
+                            <strong class="text-white">場景連結：</strong> 在大坪頂聚落的微縮場景中，我們將這個紋飾具象化，放大成為廣場中央的陶罐模型，並由帶著玉環的小人偶環繞，重現史前人群可能伴隨著貿易與交流進行的儀式慶典。
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 核心變數設定 ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a1128);
+        scene.fog = new THREE.FogExp2(0x0a1128, 0.005); // 加入霧氣增加深度感
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.05; // 不要低於地平線太多
+        controls.minDistance = 10;
+        controls.maxDistance = 250;
+
+        // --- 預設攝影機位置 ---
+        const viewPositions = {
+            map: { pos: new THREE.Vector3(0, 120, 150), target: new THREE.Vector3(0, 0, 0) },
+            dapingding: { pos: new THREE.Vector3(-30, 20, 20), target: new THREE.Vector3(-20, 5, 5) },
+            hualien: { pos: new THREE.Vector3(40, 25, -10), target: new THREE.Vector3(25, 2, -15) }
+        };
+        camera.position.copy(viewPositions.map.pos);
+        controls.target.copy(viewPositions.map.target);
+
+        // --- 光照設定 ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xfff0dd, 1.2);
+        dirLight.position.set(100, 150, 50);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.left = -80;
+        dirLight.shadow.camera.right = 80;
+        dirLight.shadow.camera.top = 80;
+        dirLight.shadow.camera.bottom = -80;
+        scene.add(dirLight);
+
+        // 打光強調西海岸
+        const spotLight = new THREE.SpotLight(0x4ade80, 0.5);
+        spotLight.position.set(-50, 80, 0);
+        spotLight.angle = Math.PI / 4;
+        spotLight.penumbra = 0.5;
+        scene.add(spotLight);
+
+        // --- STREAMING_CHUNK:Generating Procedural Terrain (Paleogeography Base)... ---
+        
+        // 地形參數
+        const terrainWidth = 100;
+        const terrainHeight = 160;
+        const segmentsX = 150;
+        const segmentsY = 200;
+        const geometry = new THREE.PlaneGeometry(terrainWidth, terrainHeight, segmentsX, segmentsY);
+        geometry.rotateX(-Math.PI / 2); // 躺平
+
+        const positions = geometry.attributes.position.array;
+        const colors = [];
+        const colorObj = new THREE.Color();
+
+        // 簡單的雜湊函數用來生成地形起伏
+        function noise(x, z) {
+            let n = Math.sin(x * 0.1) * Math.cos(z * 0.1) * 2;
+            n += Math.sin(x * 0.2 + z * 0.3) * 1.5;
+            n += Math.sin(x * 0.5 - z * 0.1) * 0.5;
+            return n;
+        }
+
+        // 大坪頂特定位置 (相對於地圖座標)
+        const dapingdingX = -18;
+        const dapingdingZ = 8;
+        
+        // 花蓮特定位置
+        const hualienX = 22;
+        const hualienZ = -12;
+
+        // 雕塑地形
+        for (let i = 0; i < positions.length; i += 3) {
+            let x = positions[i];
+            let z = positions[i + 2];
+            let y = 0;
+
+            // 1. 塑造台灣大致形狀 (橢圓形遮罩)
+            let distanceToCenter = Math.sqrt((x*x)/(1.5*1.5) + (z*z));
+            let islandMask = Math.max(0, 1 - distanceToCenter / 45); // 邊緣遞減
+            islandMask = Math.pow(islandMask, 0.5); // 讓邊緣稍微陡峭
+
+            if (islandMask > 0) {
+                // 2. 中央山脈 (靠東側高聳)
+                let mountainRidge = Math.exp(-Math.pow(x - 5, 2) / 100) * 25; // 在 x=5 處隆起
+                
+                // 添加隨機起伏
+                let detailNoise = noise(x, z) * 3;
+                
+                y = (mountainRidge + detailNoise) * islandMask;
+
+                // 3. 模組一：標示大坪頂 (突出的台地/岬角)
+                // 在特定位置加上一個高地
+                let distToDPD = Math.sqrt(Math.pow(x - dapingdingX, 2) + Math.pow(z - dapingdingZ, 2));
+                if (distToDPD < 8) {
+                    let terraceHeight = 12 * Math.exp(-distToDPD * distToDPD / 15);
+                    y = Math.max(y, terraceHeight);
+                    // 稍微削平頂部，形成「台地」感
+                    if (y > 10 && distToDPD < 4) y = 10 + (y-10)*0.2; 
+                }
+            } else {
+                y = -5; // 海底
+            }
+
+            positions[i + 1] = y;
+
+            // --- STREAMING_CHUNK:Applying color based on height to terrain... ---
+            // 根據高度上色
+            if (y < 2) {
+                // 淺灘/沙岸 (配合高海平面)
+                colorObj.setHSL(0.12, 0.4, 0.6); 
+            } else if (y < 8) {
+                // 低地/台地邊緣
+                colorObj.setHSL(0.25, 0.6, 0.3 + (y/8)*0.2); 
+            } else if (y < 18) {
+                // 山林
+                colorObj.setHSL(0.3, 0.7, 0.2); 
+            } else {
+                // 高山/岩石 (險峻視覺感)
+                colorObj.setHSL(0.0, 0.0, 0.3 + ((y-18)/15)*0.5); 
+            }
+            colors.push(colorObj.r, colorObj.g, colorObj.b);
+        }
+
+        geometry.computeVertexNormals();
+        geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+        // 使用 StandardMaterial 支援光影與頂點顏色
+        const terrainMaterial = new THREE.MeshStandardMaterial({
+            vertexColors: true,
+            roughness: 0.8,
+            metalness: 0.1
+        });
+
+        const terrain = new THREE.Mesh(geometry, terrainMaterial);
+        terrain.castShadow = true;
+        terrain.receiveShadow = true;
+        scene.add(terrain);
+
+        // --- STREAMING_CHUNK:Creating the Paleo-ocean (High sea level)... ---
+        // 模組一：將海平面拉高，淹沒嘉南平原
+        const waterLevel = 3; // 設定較高的水位
+        const waterGeo = new THREE.PlaneGeometry(200, 250);
+        waterGeo.rotateX(-Math.PI / 2);
+        
+        // 使用稍有通透感與波紋感的水材質
+        const waterMat = new THREE.MeshPhysicalMaterial({
+            color: 0x006688,
+            transparent: true,
+            opacity: 0.8,
+            roughness: 0.1,
+            metalness: 0.1,
+            transmission: 0.5,
+            ior: 1.33
+        });
+        
+        const water = new THREE.Mesh(waterGeo, waterMat);
+        water.position.y = waterLevel;
+        water.receiveShadow = true;
+        scene.add(water);
+
+        // 裝飾：海床底板，讓水看起來有深度
+        const seabedGeo = new THREE.PlaneGeometry(200, 250);
+        seabedGeo.rotateX(-Math.PI / 2);
+        const seabedMat = new THREE.MeshBasicMaterial({ color: 0x020813 });
+        const seabed = new THREE.Mesh(seabedGeo, seabedMat);
+        seabed.position.y = -10;
+        scene.add(seabed);
+
+
+        // --- STREAMING_CHUNK:Constructing the Jade Trade Route and Waypoints... ---
+        // 模組二：流動的玉路
+
+        // 1. 起點：花蓮豐田發光礦區
+        const mineGeo = new THREE.DodecahedronGeometry(1.5);
+        const mineMat = new THREE.MeshBasicMaterial({ color: 0x4ade80 });
+        const mine = new THREE.Mesh(mineGeo, mineMat);
+        mine.position.set(hualienX, 6, hualienZ);
+        scene.add(mine);
+        
+        // 礦區光暈
+        const mineLight = new THREE.PointLight(0x4ade80, 2, 20);
+        mineLight.position.copy(mine.position);
+        scene.add(mineLight);
+
+        // 2. 航線路徑點 (沿著東海岸南下，繞過恆春，沿著古海岸線北上至大坪頂)
+        const routePoints = [
+            new THREE.Vector3(hualienX, waterLevel + 0.5, hualienZ),       // 豐田出發
+            new THREE.Vector3(20, waterLevel + 0.5, 10),            // 東海岸中段
+            new THREE.Vector3(12, waterLevel + 0.5, 35),            // 恆春半島東
+            new THREE.Vector3(0, waterLevel + 0.5, 45),             // 繞過南端
+            new THREE.Vector3(-12, waterLevel + 0.5, 30),           // 西南海岸
+            new THREE.Vector3(-15, waterLevel + 0.5, 20),           // 沿著古海岸線北上
+            new THREE.Vector3(dapingdingX + 2, waterLevel + 0.5, dapingdingZ) // 抵達大坪頂海濱
+        ];
+
+        const routeCurve = new THREE.CatmullRomCurve3(routePoints);
+        
+        // 繪製發光藍色航線
+        const tubeGeo = new THREE.TubeGeometry(routeCurve, 100, 0.3, 8, false);
+        const tubeMat = new THREE.MeshBasicMaterial({ 
+            color: 0x38bdf8, 
+            transparent: true, 
+            opacity: 0.6 
+        });
+        const routeLine = new THREE.Mesh(tubeGeo, tubeMat);
+        scene.add(routeLine);
+
+        // 設置跳點 (Waypoints) 小港口
+        routePoints.forEach((pt, index) => {
+            if (index === 0 || index === routePoints.length - 1) return; // 起終點不加
+            const wpGeo = new THREE.SphereGeometry(0.8, 8, 8);
+            const wpMat = new THREE.MeshBasicMaterial({ color: 0x93c5fd });
+            const wp = new THREE.Mesh(wpGeo, wpMat);
+            wp.position.copy(pt);
+            scene.add(wp);
+        });
+
+
+        // --- STREAMING_CHUNK:Building Outrigger Canoes and animating them... ---
+        // 3. 載具：南島語族邊架艇 (簡化模型)
+        function createCanoe() {
+            const group = new THREE.Group();
+            
+            const woodMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.9 });
+            
+            // 主船體
+            const hullGeo = new THREE.CylinderGeometry(0.2, 0.2, 3, 8);
+            hullGeo.rotateZ(Math.PI / 2);
+            const hull = new THREE.Mesh(hullGeo, woodMat);
+            group.add(hull);
+
+            // 邊架 (Outrigger)
+            const outGeo = new THREE.CylinderGeometry(0.1, 0.1, 2, 8);
+            outGeo.rotateZ(Math.PI / 2);
+            const outrigger = new THREE.Mesh(outGeo, woodMat);
+            outrigger.position.set(0, 0, 1.2);
+            group.add(outrigger);
+
+            // 連接桿
+            const beamGeo = new THREE.CylinderGeometry(0.05, 0.05, 1.2, 8);
+            beamGeo.rotateX(Math.PI / 2);
+            const beam1 = new THREE.Mesh(beamGeo, woodMat);
+            beam1.position.set(0.8, 0.1, 0.6);
+            const beam2 = beam1.clone();
+            beam2.position.set(-0.8, 0.1, 0.6);
+            group.add(beam1, beam2);
+
+            // 小風帆 (可選，增添細節)
+            const sailGeo = new THREE.BufferGeometry();
+            const sailVertices = new Float32Array([
+                0, 0, 0,
+                0, 2, 0,
+                1.5, 0.5, 0
+            ]);
+            sailGeo.setAttribute('position', new THREE.BufferAttribute(sailVertices, 3));
+            const sailMat = new THREE.MeshBasicMaterial({ color: 0xdddddd, side: THREE.DoubleSide });
+            const sail = new THREE.Mesh(sailGeo, sailMat);
+            sail.position.set(0, 0.2, 0);
+            group.add(sail);
+
+            group.scale.set(0.8, 0.8, 0.8);
+            return group;
+        }
+
+        const canoes = [];
+        const numCanoes = 3;
+        for (let i = 0; i < numCanoes; i++) {
+            const canoe = createCanoe();
+            scene.add(canoe);
+            canoes.push({
+                mesh: canoe,
+                progress: i / numCanoes // 分散在路線上
+            });
+        }
+
+
+        // --- STREAMING_CHUNK:Constructing the Dapingding Micro-scene (Settlement)... ---
+        // 模組三：山海交會點（大坪頂聚落場景）
+        const dapingdingGroup = new THREE.Group();
+        dapingdingGroup.position.set(dapingdingX, 10.5, dapingdingZ); // 放置在台地高度
+        scene.add(dapingdingGroup);
+
+        // a. 碼頭/沙灘區 (較低處)
+        const dockGroup = new THREE.Group();
+        dockGroup.position.set(2, -7, 1); // 相對台地往下移到水面附近
+        dapingdingGroup.add(dockGroup);
+
+        // 停靠的獨木舟
+        const dockedCanoe = createCanoe();
+        dockedCanoe.position.set(0, 0, 0);
+        dockedCanoe.rotation.y = Math.PI / 4;
+        dockGroup.add(dockedCanoe);
+        
+        // b. 山頂聚落 (干欄式建築)
+        const houseMat = new THREE.MeshStandardMaterial({ color: 0xa08060, roughness: 1 });
+        const roofMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.8 });
+        
+        function createHouse() {
+            const house = new THREE.Group();
+            // 柱子
+            const stiltsGeo = new THREE.CylinderGeometry(0.1, 0.1, 1);
+            const stiltPositions = [[-0.8, -0.5, -0.8], [0.8, -0.5, -0.8], [-0.8, -0.5, 0.8], [0.8, -0.5, 0.8]];
+            stiltPositions.forEach(p => {
+                const stilt = new THREE.Mesh(stiltsGeo, houseMat);
+                stilt.position.set(...p);
+                house.add(stilt);
+            });
+            // 地板與牆體
+            const bodyGeo = new THREE.BoxGeometry(2, 1, 2);
+            const body = new THREE.Mesh(bodyGeo, houseMat);
+            body.position.y = 0.5;
+            house.add(body);
+            // 屋頂
+            const roofGeo = new THREE.ConeGeometry(1.8, 1.5, 4);
+            roofGeo.rotateY(Math.PI / 4);
+            const roof = new THREE.Mesh(roofGeo, roofMat);
+            roof.position.y = 1.75;
+            house.add(roof);
+            
+            return house;
+        }
+
+        const h1 = createHouse(); h1.position.set(-3, 0, -3); dapingdingGroup.add(h1);
+        const h2 = createHouse(); h2.position.set(3, 0.5, -2); h2.rotation.y = Math.PI/6; dapingdingGroup.add(h2);
+        const h3 = createHouse(); h3.position.set(0, -0.5, -5); dapingdingGroup.add(h3);
+
+        // c. 核心儀式廣場
+        const plazaGroup = new THREE.Group();
+        plazaGroup.position.set(0, 0, 1);
+        dapingdingGroup.add(plazaGroup);
+
+        // 巨大的「牽手跳舞紋陶罐」
+        const potGeo = new THREE.CylinderGeometry(0.6, 0.4, 1.5, 12);
+        const potTopGeo = new THREE.SphereGeometry(0.6, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+        const potMat = new THREE.MeshStandardMaterial({ color: 0xc17753, roughness: 0.9 });
+        
+        const potBase = new THREE.Mesh(potGeo, potMat);
+        potBase.position.y = 0.75;
+        const potTop = new THREE.Mesh(potTopGeo, potMat);
+        potTop.position.y = 1.5;
+        potTop.rotation.x = Math.PI; // 倒扣做口緣
+        
+        const pot = new THREE.Group();
+        pot.add(potBase, potTop);
+        pot.scale.set(1.5, 1.5, 1.5);
+        plazaGroup.add(pot);
+
+        // 發光點綴 (暗示陶罐上的紋飾魔力)
+        const potLight = new THREE.PointLight(0xffaa00, 1, 5);
+        potLight.position.set(0, 2, 0);
+        plazaGroup.add(potLight);
+
+        // 環繞的小人偶 (戴著發光玉環)
+        const numPeople = 6;
+        const radius = 2.5;
+        const dancers = [];
+
+        for (let i = 0; i < numPeople; i++) {
+            const angle = (i / numPeople) * Math.PI * 2;
+            const personGroup = new THREE.Group();
+            
+            // 身體
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x4a4a4a });
+            const pBody = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 0.8), bodyMat);
+            pBody.position.y = 0.4;
+            
+            const pHead = new THREE.Mesh(new THREE.SphereGeometry(0.2), bodyMat);
+            pHead.position.y = 1.0;
+            
+            personGroup.add(pBody, pHead);
+
+            // 發光玉環 (在手臂位置)
+            const ringGeo = new THREE.TorusGeometry(0.12, 0.04, 8, 16);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0x86efac });
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.position.set(0.2, 0.6, 0);
+            personGroup.add(ring);
+
+            personGroup.position.x = Math.cos(angle) * radius;
+            personGroup.position.z = Math.sin(angle) * radius;
+            // 面向中心
+            personGroup.lookAt(0, 0, 0);
+            
+            plazaGroup.add(personGroup);
+            dancers.push(personGroup);
+        }
+
+
+        // --- STREAMING_CHUNK:Setting up Animation Loop and Interaction Logic... ---
+        // 動畫時間變數
+        const clock = new THREE.Clock();
+
+        // 視角切換邏輯
+        function tweenCamera(targetPos, targetLookAt) {
+            // 這裡為了簡化不引入 GSAP，使用簡單的線性內插過渡
+            const duration = 1.5; // 秒
+            const startPos = camera.position.clone();
+            const startTarget = controls.target.clone();
+            let timeElapsed = 0;
+
+            function animateTransition() {
+                requestAnimationFrame((t) => {
+                    timeElapsed += 0.016; // 假設 60fps
+                    const alpha = Math.min(timeElapsed / duration, 1);
+                    // easeInOutQuad
+                    const easeAlpha = alpha < 0.5 ? 2 * alpha * alpha : 1 - Math.pow(-2 * alpha + 2, 2) / 2;
+
+                    camera.position.lerpVectors(startPos, targetPos, easeAlpha);
+                    controls.target.lerpVectors(startTarget, targetLookAt, easeAlpha);
+                    controls.update();
+
+                    if (alpha < 1) animateTransition();
+                });
+            }
+            animateTransition();
+        }
+
+        document.getElementById('btn-view-map').addEventListener('click', () => {
+            tweenCamera(viewPositions.map.pos, viewPositions.map.target);
+        });
+        document.getElementById('btn-view-dapingding').addEventListener('click', () => {
+            tweenCamera(viewPositions.dapingding.pos, viewPositions.dapingding.target);
+        });
+        document.getElementById('btn-view-hualien').addEventListener('click', () => {
+            tweenCamera(viewPositions.hualien.pos, viewPositions.hualien.target);
+        });
+
+        // UI 模態框邏輯
+        const modalContainer = document.getElementById('modal-container');
+        const modalContent = document.getElementById('modal-content');
+        
+        window.openModal = function(artifactId) {
+            // 隱藏所有內容
+            document.getElementById('modal-artifact-ring').classList.add('hidden');
+            document.getElementById('modal-artifact-jade').classList.add('hidden');
+            document.getElementById('modal-artifact-pottery').classList.add('hidden');
+            
+            // 新增：隱藏導覽簡介內容
+            if (document.getElementById('modal-guide')) {
+                document.getElementById('modal-guide').classList.add('hidden');
+            }
+            
+            // 顯示目標內容
+            if (artifactId === 'guide') {
+                document.getElementById('modal-guide').classList.remove('hidden');
+            } else {
+                document.getElementById('modal-' + artifactId).classList.remove('hidden');
+            }
+            
+            // 顯示模態框
+            modalContainer.classList.remove('hidden');
+            modalContainer.classList.add('flex');
+            modalContent.classList.remove('hidden'); // 確保內容框不會被隱藏
+            
+            // 重置動畫
+            modalContent.classList.remove('modal-animate');
+            void modalContent.offsetWidth; // trigger reflow
+            modalContent.classList.add('modal-animate');
+        }
+
+        window.closeModal = function() {
+            modalContainer.classList.add('hidden');
+            modalContainer.classList.remove('flex');
+        }
+
+        // 點擊背景關閉
+        modalContainer.addEventListener('click', (e) => {
+            if(e.target === modalContainer) closeModal();
+        });
+
+
+        // 視窗縮放處理
+        window.addEventListener('resize', onWindowResize, false);
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // 主動畫迴圈
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            const elapsedTime = clock.getElapsedTime();
+
+            controls.update();
+
+            // 1. 礦區發光呼吸效果
+            mine.scale.setScalar(1 + Math.sin(elapsedTime * 3) * 0.1);
+            mineLight.intensity = 2 + Math.sin(elapsedTime * 3) * 1;
+
+            // 2. 船隻沿著路徑航行
+            canoes.forEach(boatInfo => {
+                boatInfo.progress += delta * 0.03; // 速度
+                if (boatInfo.progress > 1) boatInfo.progress = 0; // 循環
+
+                const pos = routeCurve.getPointAt(boatInfo.progress);
+                const tangent = routeCurve.getTangentAt(boatInfo.progress);
+
+                boatInfo.mesh.position.copy(pos);
+                // 讓船頭對準切線方向
+                const lookAtVec = pos.clone().add(tangent);
+                boatInfo.mesh.lookAt(lookAtVec);
+                
+                // 加上輕微的海浪起伏
+                boatInfo.mesh.position.y += Math.sin(elapsedTime * 2 + boatInfo.progress * 10) * 0.1;
+            });
+
+            // 3. 大坪頂舞者跳舞動畫
+            dancers.forEach((dancer, index) => {
+                // 上下跳動
+                dancer.position.y = Math.abs(Math.sin(elapsedTime * 4 + index)) * 0.3;
+            });
+
+            // 4. 水面輕微波動 (簡單模擬)
+            water.position.y = waterLevel + Math.sin(elapsedTime) * 0.1;
+
+            renderer.render(scene, camera);
+        }
+
+        // 啟動
+        window.onload = function() {
+            animate();
+        };
+
+    </script>
+</body>
+</html>
