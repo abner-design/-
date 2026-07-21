@@ -119,6 +119,7 @@
             <a href="https://nchdb.boch.gov.tw/assets/overview/archaeologicalSite/20080923000002" target="_blank" rel="noopener noreferrer" class="text-teal-400 hover:text-teal-200 hover:underline transition duration-300">國家文化資產網</a>
             <span class="text-slate-600">|</span>
             <a href="https://beta.nmp.gov.tw/enews/no66/" target="_blank" rel="noopener noreferrer" class="text-teal-400 hover:text-teal-200 hover:underline transition duration-300">國立台灣史前文化博物館-發現史前館電子報</a>
+            <span class="text-gray-400 tracking-wider"蕭任熙製作</span>
         </div>
     </div>
 
@@ -309,7 +310,7 @@
                 
                 y = (mountainRidge + detailNoise) * islandMask;
 
-                // 3. 模組一：標示大坪頂 (突出的台地/岬角)
+                // 3. 模組一：標示大坪頂 (連接但突出的台地/岬角)
                 // 在特定位置加上一個高地
                 let distToDPD = Math.sqrt(Math.pow(x - dapingdingX, 2) + Math.pow(z - dapingdingZ, 2));
                 if (distToDPD < 8) {
