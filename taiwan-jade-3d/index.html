@@ -311,13 +311,16 @@
                 y = (mountainRidge + detailNoise) * islandMask;
 
                 // 3. 模組一：標示大坪頂 (連接但突出的台地/岬角)
+                // 建立一條從中央山脈往西延伸的「平緩丘陵」，高度大幅調降至 4.5
+                let connectionRidge = 4.5 * Math.exp(-(Math.pow(x + 6, 2) / 100 + Math.pow(z - 8, 2) / 40));
+                y += connectionRidge * islandMask;
                 // 在特定位置加上一個高地
                 let distToDPD = Math.sqrt(Math.pow(x - dapingdingX, 2) + Math.pow(z - dapingdingZ, 2));
-                if (distToDPD < 8) {
-                    let terraceHeight = 12 * Math.exp(-distToDPD * distToDPD / 15);
+                if (distToDPD < 10) {
+                    let terraceHeight = 7.5 * Math.exp(-distToDPD * distToDPD / 20);
                     y = Math.max(y, terraceHeight);
-                    // 稍微削平頂部，形成「台地」感
-                    if (y > 10 && distToDPD < 4) y = 10 + (y-10)*0.2; 
+                    // 稍微削平頂部，形成自然且相連的「低矮台地」感 (高度約 6.2)
+                    if (y > 6.2 && distToDPD < 5) y = 6.2 + (y - 6.2) * 0.1; 
                 }
             } else {
                 y = -5; // 海底
@@ -499,12 +502,14 @@
         // --- STREAMING_CHUNK:Constructing the Dapingding Micro-scene (Settlement)... ---
         // 模組三：山海交會點（大坪頂聚落場景）
         const dapingdingGroup = new THREE.Group();
-        dapingdingGroup.position.set(dapingdingX, 10.5, dapingdingZ); // 放置在台地高度
+        // 將聚落從原本的高空 10.5，降落到新的台地高度 6.5
+        dapingdingGroup.position.set(dapingdingX, 6.5, dapingdingZ); 
         scene.add(dapingdingGroup);
 
         // a. 碼頭/沙灘區 (較低處)
         const dockGroup = new THREE.Group();
-        dockGroup.position.set(2, -7, 1); // 相對台地往下移到水面附近
+        // 配合新高度微調碼頭位置，讓獨木舟剛好貼著海平面 3.0 (6.5 - 3.5 = 3)
+        dockGroup.position.set(2, -3.5, 1); 
         dapingdingGroup.add(dockGroup);
 
         // 停靠的獨木舟
