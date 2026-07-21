@@ -338,8 +338,8 @@
                 if (distToDPD < 10) {
                     let terraceHeight = 7.5 * Math.exp(-distToDPD * distToDPD / 20);
                     y = Math.max(y, terraceHeight);
-                    // 稍微削平頂部，形成自然且相連的「低矮台地」感 (高度約 6.2)
-                    if (y > 6.2 && distToDPD < 5) y = 6.2 + (y - 6.2) * 0.1; 
+                    // 稍微削平頂部，形成自然且相連的「低矮台地」感 (高度約 4.8)
+                    if (y > 4.8 && distToDPD < 5) y = 4.8 + (y - 6.2) * 0.1; 
                 }
             } else {
                 y = -5; // 海底
@@ -654,7 +654,7 @@
         // 放置於東部海岸線中南段
         const peinanX = 18;
         const peinanZ = 12;
-        peinanGroup.position.set(peinanX, 4.1, peinanZ); 
+        peinanGroup.position.set(peinanX, 9.5, peinanZ); 
         scene.add(peinanGroup);
 
         const ph1 = createHouse(); ph1.position.set(0, 0, 0); ph1.rotation.y = -Math.PI/4; peinanGroup.add(ph1);
