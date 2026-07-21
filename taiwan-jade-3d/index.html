@@ -330,8 +330,8 @@
                 y = (mountainRidge + detailNoise) * islandMask;
 
                 // 3. 模組一：標示大坪頂 (連接但突出的台地/岬角)
-                // 建立一條從中央山脈往西延伸的「平緩丘陵」，高度大幅調降至 4.5
-                let connectionRidge = 4.5 * Math.exp(-(Math.pow(x + 6, 2) / 100 + Math.pow(z - 8, 2) / 40));
+                // 建立一條從中央山脈往西延伸的「平緩丘陵」，高度大幅調降至3.2
+                let connectionRidge = 3.2 * Math.exp(-(Math.pow(x + 6, 2) / 100 + Math.pow(z - 8, 2) / 40));
                 y += connectionRidge * islandMask;
                 // 在特定位置加上一個高地
                 let distToDPD = Math.sqrt(Math.pow(x - dapingdingX, 2) + Math.pow(z - dapingdingZ, 2));
@@ -521,8 +521,8 @@
         // --- STREAMING_CHUNK:Constructing the Dapingding Micro-scene (Settlement)... ---
         // 模組三：山海交會點（大坪頂聚落場景）
         const dapingdingGroup = new THREE.Group();
-        // 將聚落從原本的高空 10.5，降落到新的台地高度 6.5
-        dapingdingGroup.position.set(dapingdingX, 6.5, dapingdingZ); 
+        // 將聚落從原本的高空 10.5，降落到新的台地高度 4.5
+        dapingdingGroup.position.set(dapingdingX, 4.5, dapingdingZ); 
         scene.add(dapingdingGroup);
 
         // a. 碼頭/沙灘區 (較低處)
@@ -654,7 +654,7 @@
         // 放置於東部海岸線中南段
         const peinanX = 18;
         const peinanZ = 12;
-        peinanGroup.position.set(peinanX, 5.5, peinanZ); 
+        peinanGroup.position.set(peinanX, 4.1, peinanZ); 
         scene.add(peinanGroup);
 
         const ph1 = createHouse(); ph1.position.set(0, 0, 0); ph1.rotation.y = -Math.PI/4; peinanGroup.add(ph1);
