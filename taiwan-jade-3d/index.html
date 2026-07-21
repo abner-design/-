@@ -122,37 +122,31 @@
             <span class="text-gray-400 tracking-wider">蕭任熙製作</span>
         </div>
     </div>
-        <!-- UI 覆蓋層 -->
-        <div id="ui-layer" class="absolute inset-0 pointer-events-none flex flex-col justify-between">
-            
-            <!-- 頂部資訊與控制列 -->
-            <header class="p-4 flex justify-between items-start w-full pointer-events-auto">
-                <!-- (此處保留原本左上角與右上角的按鈕區塊，完全不動) -->
-            </header>
 
-            <!-- --- STREAMING_CHUNK:Adding Compass UI Element... --- -->
-            <!-- 新增：動態指北針 (浮動於左下角) -->
-            <div class="absolute bottom-40 left-6 w-14 h-14 bg-slate-800/80 backdrop-blur rounded-full border border-slate-600 flex flex-col items-center justify-center shadow-[0_0_15px_rgba(0,0,0,0.5)] pointer-events-auto transition-transform hover:scale-105 z-10" title="指北針 (隨視角自動轉動)">
-                <!-- 北方紅色 N 標記 -->
-                <div class="absolute top-[2px] text-[11px] font-black text-red-500 drop-shadow-md z-20">N</div>
-                <!-- 旋轉指針本體 -->
-                <div id="compass-needle" class="w-full h-full flex items-center justify-center will-change-transform">
-                    <svg viewBox="0 0 100 100" class="w-10 h-10 drop-shadow-md">
-                        <!-- 北半部 (紅色) -->
-                        <polygon points="50,15 60,50 50,50" fill="#ef4444"/>
-                        <polygon points="50,15 40,50 50,50" fill="#f87171"/>
-                        <!-- 南半部 (銀灰) -->
-                        <polygon points="50,85 60,50 50,50" fill="#94a3b8"/>
-                        <polygon points="50,85 40,50 50,50" fill="#cbd5e1"/>
-                        <circle cx="50" cy="50" r="3" fill="#0f172a"/>
-                    </svg>
-                </div>
-            </div>            
+    <!-- 動態指北針 (浮動於左下角) -->
+    <div class="absolute bottom-40 left-6 w-14 h-14 bg-slate-800/80 backdrop-blur rounded-full border border-slate-600 flex flex-col items-center justify-center shadow-[0_0_15px_rgba(0,0,0,0.5)] pointer-events-auto transition-transform hover:scale-105 z-20" title="指北針 (隨視角自動轉動)">
+        <!-- 北方紅色 N 標記 -->
+        <div class="absolute top-[2px] text-[11px] font-black text-red-500 drop-shadow-md z-20">N</div>
+        <!-- 旋轉指針本體 -->
+        <div id="compass-needle" class="w-full h-full flex items-center justify-center will-change-transform">
+            <svg viewBox="0 0 100 100" class="w-10 h-10 drop-shadow-md">
+                <!-- 北半部 (紅色) -->
+                <polygon points="50,15 60,50 50,50" fill="#ef4444"/>
+                <polygon points="50,15 40,50 50,50" fill="#f87171"/>
+                <!-- 南半部 (銀灰) -->
+                <polygon points="50,85 60,50 50,50" fill="#94a3b8"/>
+                <polygon points="50,85 40,50 50,50" fill="#cbd5e1"/>
+                <circle cx="50" cy="50" r="3" fill="#0f172a"/>
+            </svg>
+        </div>
+    </div>            
+
     <!-- 模態框 (文物詳情/導覽) -->
-    <div id="modal-container" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div id="modal-container" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4 pointer-events-auto">
         <!-- 加入 max-h-[90vh] 和 overflow-y-auto 讓內容過長時可以滾動 -->
-        <div id="modal-content" class="bg-slate-900 border border-teal-500/30 rounded-2xl max-w-2xl w-full p-6 relative shadow-2xl shadow-teal-900/20 max-h-[90vh] overflow-y-auto">
-            <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white focus:outline-none text-2xl leading-none z-10">&times;</button>
+        <div id="modal-content" class="bg-slate-900 border border-teal-500/30 rounded-2xl max-w-2xl w-full p-6 relative shadow-2xl shadow-teal-900/20 max-h-[90vh] overflow-y-auto pointer-events-auto">
+            <!-- 修正：加大關閉按鈕的點擊範圍與層級，加上圓形底色確保絕對可以點擊 -->
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-300 hover:text-white focus:outline-none text-3xl leading-none z-[100] w-10 h-10 flex items-center justify-center bg-slate-800/80 rounded-full border border-slate-600 hover:bg-slate-700 hover:scale-110 transition shadow-lg cursor-pointer">&times;</button>
             
             <!-- 新增：導覽簡介內容 -->
             <div id="modal-guide" class="hidden text-gray-300 mt-2">
