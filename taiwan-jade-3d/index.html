@@ -737,6 +737,7 @@
 
             controls.update();
 
+            // --- STREAMING_CHUNK:Updating Animations... ---
             // 1. 礦區發光呼吸效果
             mine.scale.setScalar(1 + Math.sin(elapsedTime * 3) * 0.1);
             mineLight.intensity = 2 + Math.sin(elapsedTime * 3) * 1;
@@ -767,15 +768,8 @@
             // 4. 水面輕微波動 (簡單模擬)
             water.position.y = waterLevel + Math.sin(elapsedTime) * 0.1;
 
-            renderer.render(scene, camera);
-        }
-        // --- 動畫迴圈 ---
-        function animate() {
-            requestAnimationFrame(animate);
-            controls.update();
-            
             // --- STREAMING_CHUNK:Updating Compass Rotation... ---
-            // 新增：指北針連動邏輯
+            // 5. 指北針連動邏輯
             const compass = document.getElementById('compass-needle');
             if (compass) {
                 // 取得攝影機繞行中心的方位角 (Azimuthal Angle)
@@ -788,8 +782,6 @@
             renderer.render(scene, camera);
         }
 
-        // 啟動動畫
-        animate();
         // 啟動
         window.onload = function() {
             animate();
