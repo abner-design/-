@@ -631,6 +631,55 @@
             dancers.push(personGroup);
         }
 
+        
+        // 新增模組三-2：花蓮豐田礦區聚落
+        const hualienGroup = new THREE.Group();
+        // 依傍在發光礦脈旁的工坊聚落 (高度配合礦石 Y=6)
+        hualienGroup.position.set(hualienX - 2.5, 6.2, hualienZ - 2); 
+        scene.add(hualienGroup);
+
+        const hh1 = createHouse(); hh1.position.set(0, 0, 0); hh1.rotation.y = Math.PI/3; hualienGroup.add(hh1);
+        const hh2 = createHouse(); hh2.position.set(1.5, -0.5, 3); hh2.rotation.y = Math.PI/6; hualienGroup.add(hh2);
+        
+        // 豐田碼頭 (將高度相對於聚落降至海平面 Y=3： 6.2 - 3.2 = 3)
+        const hualienDock = new THREE.Group();
+        hualienDock.position.set(-1, -3.2, 4); 
+        hualienGroup.add(hualienDock);
+        const hDockedCanoe = createCanoe();
+        hDockedCanoe.rotation.y = Math.PI / 2;
+        hualienDock.add(hDockedCanoe);
+
+        // 新增模組三-3：東海岸聚落 (象徵臺東卑南/豐濱一帶的史前文化)
+        const peinanGroup = new THREE.Group();
+        // 放置於東部海岸線中南段
+        const peinanX = 18;
+        const peinanZ = 12;
+        peinanGroup.position.set(peinanX, 5.5, peinanZ); 
+        scene.add(peinanGroup);
+
+        const ph1 = createHouse(); ph1.position.set(0, 0, 0); ph1.rotation.y = -Math.PI/4; peinanGroup.add(ph1);
+        const ph2 = createHouse(); ph2.position.set(2, 0.2, 2.5); ph2.rotation.y = -Math.PI/6; peinanGroup.add(ph2);
+        const ph3 = createHouse(); ph3.position.set(-1.5, -0.5, -2); peinanGroup.add(ph3);
+
+        // 加入象徵東部巨石文化/卑南遺址的「板岩石柱」意象
+        const megalithGeo = new THREE.BoxGeometry(0.4, 1.8, 0.8);
+        const megalithMat = new THREE.MeshStandardMaterial({ color: 0x8899a6, roughness: 0.9, metalness: 0.1 });
+        const mega1 = new THREE.Mesh(megalithGeo, megalithMat);
+        mega1.position.set(-3, 0.5, 1);
+        mega1.rotation.y = Math.PI / 6;
+        const mega2 = new THREE.Mesh(megalithGeo, megalithMat);
+        mega2.position.set(-2.5, 0.3, 3);
+        mega2.rotation.y = Math.PI / 4;
+        peinanGroup.add(mega1, mega2);
+
+        // 東海岸碼頭 (5.5 - 2.5 = 3，貼齊水面)
+        const peinanDock = new THREE.Group();
+        peinanDock.position.set(3, -2.5, 1); 
+        peinanGroup.add(peinanDock);
+        const pDockedCanoe = createCanoe();
+        pDockedCanoe.rotation.y = -Math.PI / 3;
+        peinanDock.add(pDockedCanoe);
+
 
         // --- STREAMING_CHUNK:Setting up Animation Loop and Interaction Logic... ---
         // 動畫時間變數
